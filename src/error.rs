@@ -1,11 +1,10 @@
-
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     // common err
-    #[error("EmptyPayload")]
-    EmptyPayload,
+    #[error("EmptyPayload, offset: {0}")]
+    EmptyPayload(i64),
     #[error("UnsupportMethod: {0}")]
     UnsupportMethod(String),
 }
@@ -24,4 +23,3 @@ pub enum Error {
 //         }
 //     }
 // }
-

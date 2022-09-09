@@ -4,4 +4,5 @@ use crate::enums::StatusCode;
 pub struct Response {
     pub schema: String,
     pub code: StatusCode,
+    pub body: serde_json::Value,
 }
