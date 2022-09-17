@@ -1,4 +1,5 @@
 use super::handler::Handler;
+use super::error::Error;
 use super::message::Message as TubeMessage;
 use super::{request::Request, response::Response};
 use futures::stream::FuturesUnordered;
@@ -17,6 +18,8 @@ pub struct Tube<D: Send + Sync + 'static> {
     workers: i32,
     handlers: HashMap<String, Box<dyn Handler<D> + Sync + Send + 'static>>,
     shared_data: Arc<D>,
+    error_handler: Option<Box<dyn FnOnce(Error)>>,
+    response_handler: Option<Box<dyn FnOnce(Response)>>,
 }
 
 impl<D: Send + Sync + 'static> Tube<D> {
@@ -28,6 +31,8 @@ impl<D: Send + Sync + 'static> Tube<D> {
             workers: 3,
             shared_data: Arc::new(data),
             handlers: HashMap::new(),
+            error_handler: None,
+            response_handler: None,
         }
     }
 
@@ -39,6 +44,8 @@ impl<D: Send + Sync + 'static> Tube<D> {
             workers: settings.workers,
             shared_data: data,
             handlers: HashMap::new(),
+            error_handler: None,
+            response_handler: None,
         }
     }
 
@@ -79,7 +86,9 @@ impl<D: Send + Sync + 'static> Tube<D> {
                         let payload = if let Some(p) = borrowed_message.payload() {
                             p
                         } else {
-                            log::warn!("tube warning: empty payload");
+                            let offset = borrowed_message.offset();
+                            log::warn!("tube warning: empty payload, offset: {}", &offset);
+                            //return Err(Error::EmptyPayload(offset));
                             return Ok(());
                         };
 
@@ -97,7 +106,18 @@ impl<D: Send + Sync + 'static> Tube<D> {
                             log::warn!("tube warning: unsupport method({})", &method);
                             return Ok(());
                         };
-                        let rsp = handler.call(req).await;
+                        match handler.call(req).await {
+                            Ok(rsp) => {
+                                if let Some(rsp_handler) = &self.response_handler {
+                                    log::debug!("{:?}", &rsp);
+                                }
+                            },
+                            Err(e) => {
+                                if let Some(err_handler) = &self.error_handler {
+                                    log::debug!("{}", &e);
+                                }
+                            }
+                        }
                         Ok(())
                     });
 
