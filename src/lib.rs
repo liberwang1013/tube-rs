@@ -1,5 +1,4 @@
 pub mod enums;
-pub mod sinks;
 pub mod handler;
 mod message;
 pub mod metadata;
@@ -17,5 +16,6 @@ pub use response::Response;
 pub use tube::Tube;
 pub use config::TubeSettings;
 pub use error::{Error, Result};
-//pub mod error;
-//pub mod handler;
+pub mod client;
+pub use config::TubeClientSettings;
+pub use client::Client;

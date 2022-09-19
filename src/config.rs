@@ -5,3 +5,9 @@ pub struct TubeSettings {
     pub group: String,
     pub workers: i32,
 }
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct TubeClientSettings {
+    pub brokers: String,
+    pub server: String,
+}
