@@ -6,14 +6,15 @@ use rdkafka::{
 };
 use serde_json::Value;
 use std::time::Duration;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::{mpsc::{UnboundedReceiver, UnboundedSender}, RwLock};
 use tokio::sync::oneshot::Sender;
+use std::sync::Arc;
 
 pub struct Client {
     brokers: String,
     server: String,
     tx: UnboundedSender<(Option<Sender<(i32, i64)>>, Value)>,
-    rx: UnboundedReceiver<(Option<Sender<(i32, i64)>>, Value)>,
+    rx: Arc<RwLock<UnboundedReceiver<(Option<Sender<(i32, i64)>>, Value)>>>,
 }
 
 impl Client {
@@ -26,10 +27,10 @@ impl Client {
             brokers: conf.brokers.clone(),
             server: conf.server.clone(),
             tx,
-            rx,
+            rx: Arc::new(RwLock::new(rx)),
         }
     }
-    pub async fn run(&mut self) {
+    pub async fn run(&self) {
         let producer: FutureProducer = RdClientConfig::new()
             .set("bootstrap.servers", self.brokers.clone())
             .set("message.timeout.ms", "5000")
@@ -38,8 +39,9 @@ impl Client {
             .expect("Producer creation error");
 
         loop {
+            let mut rx = self.rx.write().await;
             tokio::select! {
-                Some((sender, data)) = self.rx.recv() => {
+                Some((sender, data)) = rx.recv() => {
                     let datab = serde_json::to_vec(&data).unwrap();
                     log::debug!("topic: {}, data: {}", &self.server, &data);
                     let digest = md5::compute(&datab);
