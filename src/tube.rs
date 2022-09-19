@@ -18,8 +18,8 @@ pub struct Tube<D: Send + Sync + 'static> {
     workers: i32,
     handlers: HashMap<String, Box<dyn Handler<D> + Sync + Send + 'static>>,
     shared_data: Arc<D>,
-    error_handler: Option<Box<dyn FnOnce(Error)>>,
-    response_handler: Option<Box<dyn FnOnce(Response)>>,
+    error_handler: Option<Box<dyn Fn(Error)>>,
+    response_handler: Option<Box<dyn Fn(Response)>>,
 }
 
 impl<D: Send + Sync + 'static> Tube<D> {
@@ -110,11 +110,13 @@ impl<D: Send + Sync + 'static> Tube<D> {
                             Ok(rsp) => {
                                 if let Some(rsp_handler) = &self.response_handler {
                                     log::debug!("{:?}", &rsp);
+                                    rsp_handler(rsp);
                                 }
                             },
                             Err(e) => {
                                 if let Some(err_handler) = &self.error_handler {
                                     log::debug!("{}", &e);
+                                    err_handler(e);
                                 }
                             }
                         }
