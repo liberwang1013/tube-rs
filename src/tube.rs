@@ -18,8 +18,8 @@ pub struct Tube<D: Send + Sync + 'static> {
     workers: i32,
     handlers: HashMap<String, Box<dyn Handler<D> + Sync + Send + 'static>>,
     shared_data: Arc<D>,
-    error_handler: Option<Box<dyn Fn(Error)>>,
-    response_handler: Option<Box<dyn Fn(Response)>>,
+    error_handler: Option<Box<dyn Fn(Error) + Sync + Send + 'static>>,
+    response_handler: Option<Box<dyn Fn(Response) + Sync + Send + 'static>>,
 }
 
 impl<D: Send + Sync + 'static> Tube<D> {
